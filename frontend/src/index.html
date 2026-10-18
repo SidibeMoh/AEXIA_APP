@@ -219,7 +219,7 @@
                 O: parseInt(document.getElementById('slider-O').value), M: parseInt(document.getElementById('slider-M').value)
             };
             try {
-                const response = await fetch('http://localhost:8001/api/v1/scoring/org', {
+                const response = await fetch('http://https://aexia-app.onrender.com:8001/api/v1/scoring/org', {
                     method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data)
                 });
                 const result = await response.json();
@@ -233,7 +233,7 @@
                 radarChartInstance.data.datasets[0].pointBackgroundColor = isRed ? 'rgba(239, 68, 68, 1)' : 'rgba(59, 130, 246, 1)';
                 radarChartInstance.update();
 
-                await fetch(`http://localhost:8001/api/v1/organizations/${ORG_ID}/aexia-o`, {
+                await fetch(`http://https://aexia-app.onrender.com:8001/api/v1/organizations/${ORG_ID}/aexia-o`, {
                     method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data)
                 });
                 document.getElementById('org-result').innerHTML += `<br><span class="text-green-400 text-xs">✔️ Sauvegardé</span>`;
@@ -245,7 +245,7 @@
             const sysLevel = parseInt(document.getElementById('slider-S').value);
             const risk = document.getElementById('risk-level').value;
             try {
-                const response = await fetch('http://localhost:8001/api/v1/scoring/decision', {
+                const response = await fetch('http://https://aexia-app.onrender.com:8001/api/v1/scoring/decision', {
                     method: 'POST', headers: { 'Content-Type': 'application/json' }, 
                     body: JSON.stringify({ org_level: niveauO, sys_level: sysLevel, risk: risk })
                 });
@@ -271,7 +271,7 @@
             const beta = parseInt(document.getElementById('rad-beta').value);
             const data = { t_months: [0, 6, 12], s_att: [9, 9, 9], s_eff: [5, 5, 5], beta: beta };
             try {
-                const response = await fetch('http://localhost:8001/api/v1/scoring/rad/system', {
+                const response = await fetch('http://https://aexia-app.onrender.com:8001/api/v1/scoring/rad/system', {
                     method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data)
                 });
                 const result = await response.json();
@@ -291,7 +291,7 @@
                 ]
             };
             try {
-                const response = await fetch('http://localhost:8001/api/v1/scoring/ecs', {
+                const response = await fetch('http://https://aexia-app.onrender.com:8001/api/v1/scoring/ecs', {
                     method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data)
                 });
                 const result = await response.json();
@@ -305,7 +305,7 @@
         async function chargerHistorique() {
             const tbody = document.getElementById('historique-body');
             try {
-                const response = await fetch(`http://localhost:8001/api/v1/organizations/${ORG_ID}/aexia-o`);
+                const response = await fetch(`http://https://aexia-app.onrender.com:8001/api/v1/organizations/${ORG_ID}/aexia-o`);
                 const data = await response.json();
                 if (!Array.isArray(data)) throw new Error(data.detail);
                 if (data.length === 0) return tbody.innerHTML = `<tr><td colspan="7" class="p-3 text-center text-slate-500 italic">Aucun score.</td></tr>`;
