@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>AEXIA - Connexion</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>body { background-color: #0f172a; color: #f8fafc; }</style>
+</head>
+<body class="min-h-screen flex items-center justify-center p-4">
+
+    <div class="bg-slate-800 p-8 rounded-xl shadow-2xl border border-slate-700 w-full max-w-md">
+        <div class="text-center mb-8">
+            <h1 class="text-3xl font-bold text-blue-400 mb-2">AEXIA™</h1>
+            <p class="text-slate-400">Veuillez vous connecter pour continuer</p>
+        </div>
+
+        <form id="loginForm" class="space-y-6">
+            <div>
+                <label class="block text-sm font-medium mb-2">Nom d'utilisateur</label>
+                <input type="text" id="username" value="admin" class="w-full bg-slate-900 border border-slate-600 rounded-lg p-3 text-white focus:outline-none focus:border-blue-500" required>
+            </div>
+            <div>
+                <label class="block text-sm font-medium mb-2">Mot de passe</label>
+                <input type="password" id="password" value="secret" class="w-full bg-slate-900 border border-slate-600 rounded-lg p-3 text-white focus:outline-none focus:border-blue-500" required>
+                <p class="text-xs text-slate-500 mt-2">Indice : le mot de passe est "secret"</p>
+            </div>
+            <div id="error-msg" class="text-red-500 text-sm hidden text-center"></div>
+            <button type="submit" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 rounded-lg transition">
+                Se connecter
+            </button>
+        </form>
+    </div>
+
+    <script>
+        document.getElementById('loginForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            const errorMsg = document.getElementById('error-msg');
+
+            // L'API FastAPI attend les données dans un format spécial (Form Data)
+            const formData = new URLSearchParams();
+            formData.append('username', username);
+            formData.append('password', password);
+
+            try {
+                const response = await fetch('http://localhost:8001/api/v1/auth/token', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: formData
+                });
+
+                if (!response.ok) throw new Error("Identifiants incorrects");
+
+                const data = await response.json();
+                
+                // On sauvegarde le token dans le navigateur
+                localStorage.setItem('aexia_token', data.access_token);
+                
+                // On redirige vers le tableau de bord
+                window.location.href = 'index.html';
+
+            } catch (error) {
+                errorMsg.innerText = error.message;
+                errorMsg.classList.remove('hidden');
+            }
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AEXIA - Dashboard Complet</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body { background-color: #0f172a; color: #f8fafc; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        input[type=range] { accent-color: #3b82f6; }
+    </style>
+</head>
+<!-- On ajoute checkAuth() au chargement de la page -->
+<body class="min-h-screen p-8 pb-20" onload="checkAuth(); initRadarChart()">
+
+    <div class="max-w-6xl mx-auto">
+        <!-- En-tête avec bouton Déconnexion -->
+        <div class="relative text-center mb-10">
+            <h1 class="text-4xl font-bold text-blue-400 mb-2">AEXIA™ Framework v3.2</h1>
+            <p class="text-slate-400">Tableau de bord de Gouvernance</p>
+            <button onclick="logout()" class="absolute top-0 right-0 bg-red-900 hover:bg-red-800 text-white text-sm font-bold py-2 px-4 rounded transition">
+                Déconnexion
+            </button>
+        </div>
+
+        <!-- LIGNE 1 : Maturité O, S et Décision -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-12">
+            
+            <!-- COLONNE 1 : Axe O (Organisation) -->
+            <div class="bg-slate-800 p-6 rounded-xl shadow-lg border border-slate-700">
+                <h2 class="text-xl font-semibold mb-4 border-b border-slate-600 pb-2 text-blue-300">1. Maturité Organisation (AEXIA-O)</h2>
+                <div class="mb-3">
+                    <label class="flex justify-between text-sm mb-1"><span>F - Fondements</span> <span id="val-F" class="text-blue-400 font-bold">3</span></label>
+                    <input type="range" id="slider-F" min="0" max="5" value="3" class="w-full" oninput="document.getElementById('val-F').innerText = this.value">
+                </div>
+                <div class="mb-3">
+                    <label class="flex justify-between text-sm mb-1"><span>A - Architecture</span> <span id="val-A" class="text-blue-400 font-bold">3</span></label>
+                    <input type="range" id="slider-A" min="0" max="5" value="3" class="w-full" oninput="document.getElementById('val-A').innerText = this.value">
+                </div>
+                <div class="mb-3">
+                    <label class="flex justify-between text-sm mb-1"><span>G - Gouvernance</span> <span id="val-G" class="text-blue-400 font-bold">3</span></label>
+                    <input type="range" id="slider-G" min="0" max="5" value="3" class="w-full" oninput="document.getElementById('val-G').innerText = this.value">
+                </div>
+                <div class="mb-3">
+                    <label class="flex justify-between text-sm mb-1"><span>C - Conformité</span> <span id="val-C" class="text-blue-400 font-bold">3</span></label>
+                    <input type="range" id="slider-C" min="0" max="5" value="3" class="w-full" oninput="document.getElementById('val-C').innerText = this.value">
+                </div>
+                <div class="mb-3">
+                    <label class="flex justify-between text-sm mb-1"><span>O - Opérations</span> <span id="val-O" class="text-blue-400 font-bold">3</span></label>
+                    <input type="range" id="slider-O" min="0" max="5" value="3" class="w-full" oninput="document.getElementById('val-O').innerText = this.value">
+                </div>
+                <div class="mb-4">
+                    <label class="flex justify-between text-sm mb-1"><span>M - Mesure</span> <span id="val-M" class="text-blue-400 font-bold">3</span></label>
+                    <input type="range" id="slider-M" min="0" max="5" value="3" class="w-full" oninput="document.getElementById('val-M').innerText = this.value">
+                </div>
+                <button onclick="calculerOrganisation()" class="w-full bg-slate-600 hover:bg-slate-500 text-white font-bold py-2 rounded-lg transition">
+                    Calculer le niveau O
+                </button>
+                <div class="mt-3 text-center text-sm">
+                    Niveau O publié : <span id="org-result" class="font-bold text-white text-lg">-</span>
+                </div>
+            </div>
+
+            <!-- COLONNE 2 : Axe S (Système) -->
+            <div class="bg-slate-800 p-6 rounded-xl shadow-lg border border-slate-700">
+                <h2 class="text-xl font-semibold mb-4 border-b border-slate-600 pb-2 text-green-300">2. Maturité Système (AEXIA-S)</h2>
+                <div class="mb-6">
+                    <label class="flex justify-between text-sm mb-1"><span>Niveau du système</span> <span id="val-S" class="text-green-400 font-bold text-xl">5</span></label>
+                    <input type="range" id="slider-S" min="0" max="9" value="5" class="w-full" oninput="document.getElementById('val-S').innerText = this.value">
+                </div>
+                <div class="mb-6">
+                    <label class="block text-sm mb-1">Niveau de risque (AI Act)</label>
+                    <select id="risk-level" class="w-full bg-slate-900 border border-slate-600 rounded p-2 text-white">
+                        <option value="minimal">Minimal</option>
+                        <option value="limite" selected>Limité</option>
+                        <option value="haut_risque">Haut Risque</option>
+                        <option value="inacceptable">Inacceptable</option>
+                    </select>
+                </div>
+                <button onclick="evaluerDecision()" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 rounded-lg transition shadow-lg shadow-blue-900/50">
+                    🚀 Évaluer le Déploiement
+                </button>
+            </div>
+
+            <!-- COLONNE 3 : Décision -->
+            <div class="bg-slate-800 p-6 rounded-xl shadow-lg border border-slate-700 flex flex-col justify-center text-center">
+                <h2 class="text-xl font-semibold mb-4 border-b border-slate-600 pb-2">3. Décision Finale</h2>
+                <div id="decision-vide" class="text-slate-500 italic py-10">En attente de calcul...</div>
+                <div id="decision-affiche" class="hidden">
+                    <div id="dec-icon" class="text-6xl mb-4"></div>
+                    <div id="dec-label" class="text-2xl font-bold mb-2"></div>
+                    <div id="dec-code" class="text-sm font-mono text-slate-400 mb-4 bg-slate-900 p-1 rounded inline-block"></div>
+                    <div id="dec-conditions-container" class="hidden mt-4 bg-slate-900 p-3 rounded text-left border border-slate-700">
+                        <p class="text-xs font-bold text-slate-300 mb-2 uppercase">Conditions :</p>
+                        <ul id="dec-conditions" class="text-sm text-slate-400 list-disc pl-4"></ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- LIGNE 2 : Radar Chart -->
+        <div class="bg-slate-800 rounded-xl shadow-lg border border-slate-700 p-6 flex flex-col items-center mb-12">
+            <h2 class="text-2xl font-bold text-blue-300 mb-6">Radar de Maturité (AEXIA-O)</h2>
+            <div class="w-full max-w-2xl"><canvas id="radarChart"></canvas></div>
+        </div>
+
+        <!-- LIGNE 3 : Modules RAD et ECS -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-12">
+            <!-- Module RAD -->
+            <div class="bg-slate-800 p-6 rounded-xl shadow-lg border border-slate-700 border-t-4 border-t-red-500">
+                <h2 class="text-xl font-semibold mb-2 text-red-400">RAD - Dette Algorithmique</h2>
+                <p class="text-sm text-slate-400 mb-4">Évalue l'écart de maturité d'un système critique.</p>
+                <div class="mb-4">
+                    <label class="block text-sm mb-1">Criticité (Beta AI Act) :</label>
+                    <select id="rad-beta" class="w-full bg-slate-900 border border-slate-600 rounded p-2 text-white">
+                        <option value="1">1 - Risque Minimal</option>
+                        <option value="2">2 - Risque Limité</option>
+                        <option value="3" selected>3 - Haut Risque (Annexe III)</option>
+                        <option value="4">4 - Inacceptable</option>
+                    </select>
+                </div>
+                <button onclick="calculerRAD()" class="w-full bg-red-600 hover:bg-red-500 text-white font-bold py-2 rounded-lg transition">
+                    Calculer le RAD
+                </button>
+                <div id="rad-result" class="mt-4 text-center hidden">
+                    <p class="text-sm text-slate-400">Dette (RAD) :</p>
+                    <p id="rad-value" class="text-2xl font-bold text-red-400">0.00</p>
+                    <p id="rad-interpretation" class="text-xs text-slate-300 mt-1"></p>
+                </div>
+            </div>
+
+            <!-- Module ECS -->
+            <div class="bg-slate-800 p-6 rounded-xl shadow-lg border border-slate-700 border-t-4 border-t-green-500">
+                <h2 class="text-xl font-semibold mb-2 text-green-400">ECS - Stabilité des Explications</h2>
+                <p class="text-sm text-slate-400 mb-4">Vérifie si l'explication de l'IA est robuste face aux perturbations.</p>
+                <div class="mb-4 text-center bg-slate-900 p-2 rounded">
+                    <p class="text-xs text-slate-500">Simulation de test sur un modèle SHAP</p>
+                </div>
+                <button onclick="calculerECS()" class="w-full bg-green-600 hover:bg-green-500 text-white font-bold py-2 rounded-lg transition">
+                    Simuler le calcul ECS
+                </button>
+                <div id="ecs-result" class="mt-4 text-center hidden">
+                    <p class="text-sm text-slate-400">Score ECS (0 à 1) :</p>
+                    <p id="ecs-value" class="text-2xl font-bold text-green-400">0.00</p>
+                    <p id="ecs-status" class="text-xs mt-1"></p>
+                </div>
+            </div>
+        </div>
+
+        <!-- LIGNE 4 : Historique -->
+        <div class="bg-slate-800 rounded-xl shadow-lg border border-slate-700 p-6">
+            <div class="flex justify-between items-center border-b border-slate-600 pb-4 mb-4">
+                <h2 class="text-2xl font-bold text-blue-300">Historique des Audits (AEXIA-O)</h2>
+                <button onclick="chargerHistorique()" class="bg-slate-600 hover:bg-slate-500 text-white font-bold py-2 px-4 rounded transition">🔄 Rafraîchir</button>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse">
+                    <thead>
+                        <tr class="text-slate-400 border-b border-slate-700">
+                            <th class="p-3">Date</th><th class="p-3">F</th><th class="p-3">A</th><th class="p-3">G</th><th class="p-3">C</th><th class="p-3">O</th><th class="p-3">M</th>
+                        </tr>
+                    </thead>
+                    <tbody id="historique-body">
+                        <tr><td colspan="7" class="p-3 text-center text-slate-500 italic">Cliquez sur "Rafraîchir"</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        // --- NOUVEAU : Vérification de la connexion ---
+        function checkAuth() {
+            const token = localStorage.getItem('aexia_token');
+            if (!token) {
+                window.location.href = 'login.html'; // Redirection immédiate
+            }
+        }
+
+        function logout() {
+            localStorage.removeItem('aexia_token');
+            window.location.href = 'login.html';
+        }
+        // ----------------------------------------------
+
+        let niveauO = null;
+        let radarChartInstance = null;
+        const ORG_ID = "27693c07-59b5-4284-8cbf-8ce1fc6eab60"; 
+
+        function initRadarChart() {
+            const ctx = document.getElementById('radarChart').getContext('2d');
+            radarChartInstance = new Chart(ctx, {
+                type: 'radar',
+                data: {
+                    labels: ['F', 'A', 'G', 'C', 'O', 'M'],
+                    datasets: [{
+                        label: 'Niveau (0-5)',
+                        data: [3, 3, 3, 3, 3, 3],
+                        backgroundColor: 'rgba(59, 130, 246, 0.3)',
+                        borderColor: 'rgba(59, 130, 246, 1)',
+                        pointBackgroundColor: 'rgba(59, 130, 246, 1)',
+                        borderWidth: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    scales: { r: { min: 0, max: 5, ticks: { stepSize: 1, color: '#94a3b8', backdropColor: 'transparent' }, grid: { color: '#334155' }, angleLines: { color: '#334155' }, pointLabels: { color: '#cbd5e1', font: { size: 14, weight: 'bold' } } } },
+                    plugins: { legend: { labels: { color: '#f8fafc' } } }
+                }
+            });
+        }
+
+        async function calculerOrganisation() {
+            const data = {
+                F: parseInt(document.getElementById('slider-F').value), A: parseInt(document.getElementById('slider-A').value),
+                G: parseInt(document.getElementById('slider-G').value), C: parseInt(document.getElementById('slider-C').value),
+                O: parseInt(document.getElementById('slider-O').value), M: parseInt(document.getElementById('slider-M').value)
+            };
+            try {
+                const response = await fetch('http://localhost:8001/api/v1/scoring/org', {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data)
+                });
+                const result = await response.json();
+                niveauO = result.published_level;
+                document.getElementById('org-result').innerText = `N${niveauO} - ${result.published_label}`;
+
+                radarChartInstance.data.datasets[0].data = [data.F, data.A, data.G, data.C, data.O, data.M];
+                const isRed = [data.F, data.A, data.G, data.C, data.O, data.M].includes(0);
+                radarChartInstance.data.datasets[0].backgroundColor = isRed ? 'rgba(239, 68, 68, 0.3)' : 'rgba(59, 130, 246, 0.3)';
+                radarChartInstance.data.datasets[0].borderColor = isRed ? 'rgba(239, 68, 68, 1)' : 'rgba(59, 130, 246, 1)';
+                radarChartInstance.data.datasets[0].pointBackgroundColor = isRed ? 'rgba(239, 68, 68, 1)' : 'rgba(59, 130, 246, 1)';
+                radarChartInstance.update();
+
+                await fetch(`http://localhost:8001/api/v1/organizations/${ORG_ID}/aexia-o`, {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data)
+                });
+                document.getElementById('org-result').innerHTML += `<br><span class="text-green-400 text-xs">✔️ Sauvegardé</span>`;
+            } catch (error) { alert("Erreur API."); }
+        }
+
+        async function evaluerDecision() {
+            if (niveauO === null) return alert("Calculez d'abord le niveau O.");
+            const sysLevel = parseInt(document.getElementById('slider-S').value);
+            const risk = document.getElementById('risk-level').value;
+            try {
+                const response = await fetch('http://localhost:8001/api/v1/scoring/decision', {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' }, 
+                    body: JSON.stringify({ org_level: niveauO, sys_level: sysLevel, risk: risk })
+                });
+                const result = await response.json();
+                document.getElementById('decision-vide').classList.add('hidden');
+                document.getElementById('decision-affiche').classList.remove('hidden');
+                document.getElementById('dec-code').innerText = result.code;
+                document.getElementById('dec-label').innerText = result.label;
+                document.getElementById('dec-icon').innerText = result.authorized ? "✅" : "🚫";
+                document.getElementById('dec-label').className = result.authorized ? "text-2xl font-bold mb-2 text-green-400" : "text-2xl font-bold mb-2 text-red-500";
+                
+                const condContainer = document.getElementById('dec-conditions-container');
+                const condList = document.getElementById('dec-conditions');
+                condList.innerHTML = "";
+                if (result.conditions && result.conditions.length > 0) {
+                    condContainer.classList.remove('hidden');
+                    result.conditions.forEach(c => { const li = document.createElement('li'); li.innerText = c; condList.appendChild(li); });
+                } else { condContainer.classList.add('hidden'); }
+            } catch (error) { alert("Erreur API Décision."); }
+        }
+
+        async function calculerRAD() {
+            const beta = parseInt(document.getElementById('rad-beta').value);
+            const data = { t_months: [0, 6, 12], s_att: [9, 9, 9], s_eff: [5, 5, 5], beta: beta };
+            try {
+                const response = await fetch('http://localhost:8001/api/v1/scoring/rad/system', {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data)
+                });
+                const result = await response.json();
+                document.getElementById('rad-result').classList.remove('hidden');
+                document.getElementById('rad-value').innerText = result.rad.toFixed(2);
+                document.getElementById('rad-interpretation').innerText = result.rad > 10 ? "Dette Critique !" : "Dette modérée.";
+            } catch (error) { alert("Erreur API RAD."); }
+        }
+
+        async function calculerECS() {
+            const data = {
+                phi_x: [0.5, 0.2, -0.1, 0.8, -0.4],
+                neighbour_phis: [
+                    [0.5, 0.2, -0.1, 0.8, -0.4],
+                    [0.4, 0.1, -0.2, 0.7, -0.3],
+                    [0.6, 0.3,  0.0, 0.9, -0.5]
+                ]
+            };
+            try {
+                const response = await fetch('http://localhost:8001/api/v1/scoring/ecs', {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data)
+                });
+                const result = await response.json();
+                document.getElementById('ecs-result').classList.remove('hidden');
+                document.getElementById('ecs-value').innerText = result.ecs.toFixed(2);
+                document.getElementById('ecs-status').innerText = result.ecs > 0.8 ? "✅ Explication très stable." : "⚠️ Explication instable.";
+                document.getElementById('ecs-status').className = result.ecs > 0.8 ? "text-xs mt-1 text-green-400" : "text-xs mt-1 text-red-400";
+            } catch (error) { alert("Erreur API ECS."); }
+        }
+
+        async function chargerHistorique() {
+            const tbody = document.getElementById('historique-body');
+            try {
+                const response = await fetch(`http://localhost:8001/api/v1/organizations/${ORG_ID}/aexia-o`);
+                const data = await response.json();
+                if (!Array.isArray(data)) throw new Error(data.detail);
+                if (data.length === 0) return tbody.innerHTML = `<tr><td colspan="7" class="p-3 text-center text-slate-500 italic">Aucun score.</td></tr>`;
+                
+                tbody.innerHTML = ""; 
+                data.forEach(score => {
+                    const date = new Date(score.evaluated_at).toLocaleString('fr-FR');
+                    tbody.innerHTML += `
+                        <tr class="border-b border-slate-700 hover:bg-slate-700/50 transition">
+                            <td class="p-3 text-sm text-slate-300">${date}</td>
+                            <td class="p-3 font-bold">${score.F ?? '-'}</td>
+                            <td class="p-3 font-bold">${score.A ?? '-'}</td>
+                            <td class="p-3 font-bold">${score.G ?? '-'}</td>
+                            <td class="p-3 font-bold ${score.C === 0 ? 'text-red-500' : ''}">${score.C ?? '-'}</td>
+                            <td class="p-3 font-bold">${score.O ?? '-'}</td>
+                            <td class="p-3 font-bold">${score.M ?? '-'}</td>
+                        </tr>`;
+                });
+            } catch (error) { alert("Erreur : " + error.message); }
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,21 @@
+version: '3.9'
+
+services:
+  aexia-api:
+    build:
+      context: ./api
+      dockerfile: Dockerfile
+    container_name: aexia_api
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgresql://ibi_user:IbiPassword2026!@ibi_db:5432/IBI_DataBase
+      SECRET_KEY: aexia_secret_key_at_least_32_characters_long_2026
+      ALGORITHM: HS256
+    ports:
+      - "8001:8000"
+    networks:
+      - ibi_api_default
+
+networks:
+  ibi_api_default:
+    external: true
