@@ -11,17 +11,14 @@ app = FastAPI(
     redoc_url="/redoc"
 )
 
-# CORS pour le frontend
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"], 
-allow_credentials=False,
-    allow_credentials=True,
+    allow_origins=["*"],
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# Routers
 app.include_router(organizations.router, prefix="/api/v1", tags=["Organizations"])
 app.include_router(cards.router, prefix="/api/v1", tags=["AEXIA Cards"])
 app.include_router(audits.router, prefix="/api/v1", tags=["Audits"])
@@ -30,12 +27,7 @@ app.include_router(auth.router, prefix="/api/v1/auth", tags=["Authentification"]
 
 @app.get("/")
 def root():
-    return {
-        "service": "AEXIA Platform API",
-        "version": settings.API_VERSION,
-        "status": "operational",
-        "docs": "/docs"
-    }
+    return {"service": "AEXIA Platform API", "version": settings.API_VERSION, "status": "operational"}
 
 @app.get("/health")
 def health():
