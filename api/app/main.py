@@ -2,6 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from .config import settings
 from .routers import organizations, cards, audits, scoring, auth
+from .routers import organizations, cards, audits, scoring, auth, dcme
 
 app = FastAPI(
     title=settings.API_TITLE,
@@ -24,6 +25,7 @@ app.include_router(cards.router, prefix="/api/v1", tags=["AEXIA Cards"])
 app.include_router(audits.router, prefix="/api/v1", tags=["Audits"])
 app.include_router(scoring.router, prefix="/api/v1", tags=["Scoring"])
 app.include_router(auth.router, prefix="/api/v1/auth", tags=["Authentification"])
+app.include_router(dcme.router, prefix="/api/v1", tags=["DCME"])
 
 @app.get("/")
 def root():
