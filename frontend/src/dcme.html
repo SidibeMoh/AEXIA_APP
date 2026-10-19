@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AEXIA - Analyse DCME</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>body { background-color: #0f172a; color: #f8fafc; font-family: 'Segoe UI', sans-serif; }</style>
+</head>
+<body class="min-h-screen p-8 pb-20">
+
+    <div class="max-w-4xl mx-auto">
+        <!-- En-tête -->
+        <div class="relative text-center mb-10">
+            <h1 class="text-4xl font-bold text-blue-400 mb-2">DCME - Explication Causale</h1>
+            <p class="text-slate-400">Le module DCME décompose la prédiction d'un modèle d'IA pour révéler les biais directs et indirects.</p>
+            <a href="index.html" class="absolute top-0 right-0 bg-red-900 hover:bg-red-800 text-white text-sm font-bold py-2 px-4 rounded transition">
+                Retour au tableau de bord
+            </a>
+        </div>
+
+        <!-- Formulaire -->
+        <div class="bg-slate-800 p-8 rounded-xl shadow-lg border border-slate-700 mb-12">
+            <h2 class="text-2xl font-bold mb-6 text-white">1. Profil à analyser</h2>
+            
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+                <div>
+                    <label class="block text-sm font-medium text-slate-300 mb-2">Âge</label>
+                    <input type="number" id="age" value="30" min="18" max="70" class="w-full bg-slate-900 border border-slate-600 rounded-lg p-3 text-white focus:ring-blue-500 focus:border-blue-500">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-slate-300 mb-2">Genre</label>
+                    <select id="gender" class="w-full bg-slate-900 border border-slate-600 rounded-lg p-3 text-white focus:ring-blue-500 focus:border-blue-500">
+                        <option value="0">Femme</option>
+                        <option value="1">Homme</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-slate-300 mb-2">Salaire annuel (€)</label>
+                    <input type="number" id="salary" value="45000" step="1000" class="w-full bg-slate-900 border border-slate-600 rounded-lg p-3 text-white focus:ring-blue-500 focus:border-blue-500">
+                </div>
+            </div>
+
+            <button id="btn-analyze" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 px-4 rounded-lg transition flex justify-center items-center">
+                <span id="btn-text">Analyser la prédiction</span>
+                <svg id="loader" class="hidden animate-spin ml-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+            </button>
+        </div>
+
+        <!-- Résultats -->
+        <div id="results" class="hidden bg-slate-800 p-8 rounded-xl shadow-lg border border-slate-700">
+            <h2 class="text-2xl font-bold mb-6 text-white">2. Résultat de l'explication</h2>
+            
+            <div class="grid grid-cols-2 gap-4 mb-8">
+                <div class="bg-slate-900 p-4 rounded-lg text-center border border-slate-700">
+                    <p class="text-sm text-slate-400 mb-1">Probabilité de prêt (Prédiction)</p>
+                    <p id="res-prediction" class="text-3xl font-bold text-blue-400">-</p>
+                </div>
+                <div class="bg-slate-900 p-4 rounded-lg text-center border border-slate-700">
+                    <p class="text-sm text-slate-400 mb-1">Moyenne globale (Baseline)</p>
+                    <p id="res-baseline" class="text-3xl font-bold text-slate-300">-</p>
+                </div>
+            </div>
+
+            <div class="relative w-full max-w-2xl mx-auto h-80">
+                <canvas id="dcmeChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let chartInstance = null;
+        // URL de l'API sur Render
+        const API_URL = "https://aexia-app.onrender.com/api/v1/scoring/dcme";
+
+        document.getElementById('btn-analyze').addEventListener('click', async () => {
+            const btnText = document.getElementById('btn-text');
+            const loader = document.getElementById('loader');
+            const btn = document.getElementById('btn-analyze');
+            
+            btnText.innerText = "Calcul en cours...";
+            loader.classList.remove('hidden');
+            btn.disabled = true;
+
+            const data = {
+                Age: parseInt(document.getElementById('age').value),
+                Gender: parseInt(document.getElementById('gender').value),
+                Salary: parseFloat(document.getElementById('salary').value)
+            };
+
+            try {
+                const response = await fetch(API_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+
+                if (!response.ok) throw new Error("Erreur de l'API");
+                
+                const result = await response.json();
+                
+                document.getElementById('results').classList.remove('hidden');
+                document.getElementById('res-prediction').innerText = (result.prediction * 100).toFixed(1) + "%";
+                document.getElementById('res-baseline').innerText = (result.baseline * 100).toFixed(1) + "%";
+
+                const labels = [];
+                const values = [];
+                const colors = [];
+
+                for (const [key, val] of Object.entries(result.direct_contributions)) {
+                    labels.push(`Direct: ${key}`);
+                    values.push(val);
+                    colors.push(val > 0 ? 'rgba(59, 130, 246, 0.8)' : 'rgba(239, 68, 68, 0.8)'); 
+                }
+
+                for (const [key, val] of Object.entries(result.mediated_contributions)) {
+                    labels.push(`Médié: ${key.replace('_', ' ')}`);
+                    values.push(val);
+                    colors.push(val > 0 ? 'rgba(139, 92, 246, 0.8)' : 'rgba(236, 72, 153, 0.8)'); 
+                }
+
+                if (chartInstance) chartInstance.destroy();
+                
+                const ctx = document.getElementById('dcmeChart').getContext('2d');
+                chartInstance = new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: labels,
+                        datasets: [{ label: 'Impact', data: values, backgroundColor: colors, borderWidth: 1 }]
+                    },
+                    options: {
+                        indexAxis: 'y', responsive: true, maintainAspectRatio: false,
+                        scales: {
+                            x: { title: { display: true, text: 'Impact (Négatif = Réduit, Positif = Augmente)', color: '#94a3b8' }, grid: { color: '#334155' }, ticks: { color: '#94a3b8' } },
+                            y: { grid: { display: false }, ticks: { color: '#cbd5e1' } }
+                        },
+                        plugins: { legend: { display: false } }
+                    }
+                });
+
+            } catch (error) {
+                alert("Erreur lors du calcul : l'API Render est peut-être en train de se réveiller. Attendez 30s et réessayez.");
+            } finally {
+                btnText.innerText = "Analyser la prédiction";
+                loader.classList.add('hidden');
+                btn.disabled = false;
+            }
+        });
+    </script>
+</body>
+</html>
