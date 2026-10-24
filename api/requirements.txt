@@ -1,10 +1,10 @@
-fastapi
+﻿fastapi
 uvicorn[standard]
 psycopg2-binary
 pydantic
 pydantic-settings
-python-multipart
-python-jose[cryptography]
+python-multipart>=0.0.32
+PyJWT>=2.15.1
 passlib[bcrypt]
 bcrypt
 jsonschema
