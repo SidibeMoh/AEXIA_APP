@@ -76,6 +76,10 @@ class DCMEngine:
         # Baseline (phi_0) = E[f(X)]
         self.baseline = self.model.predict_proba(self.df[self.features])[:, 1].mean()
 
+        # f(x_bar) : prédiction au point moyen, pour l'efficacité Shapley rigoureuse
+        self.x_bar = self.df[self.features].mean().to_dict()
+        self.baseline_point = float(self._predict(self.x_bar))
+
     def _predict(self, instance: dict) -> float:
         """Retourne la probabilité de prêt (classe 1) pour une instance."""
         df_inst = pd.DataFrame([instance])
@@ -116,7 +120,7 @@ class DCMEngine:
             v_without = self._predict(inst_without)
             
             # Poids de la coalition
-            weight = math.factorial(len(S)) * math.factorial(n - len(S)) / math.factorial(n)
+            weight = math.factorial(len(S)) * math.factorial(n - len(S)) / math.factorial(n + 1)
             shapley += weight * (v_with - v_without)
             
         return shapley
@@ -156,7 +160,7 @@ class DCMEngine:
             inst_without_filled = self._causal_fill(inst_without, intervened_without)
             v_with = self._predict(inst_with_filled)
             v_without = self._predict(inst_without_filled)
-            weight = math.factorial(len(S)) * math.factorial(n - len(S)) / math.factorial(n)
+            weight = math.factorial(len(S)) * math.factorial(n - len(S)) / math.factorial(n + 1)
             shapley += weight * (v_with - v_without)
         return shapley
 
@@ -172,13 +176,29 @@ class DCMEngine:
         y_hat = self._predict(instance)
         sum_psi = float(sum(psi.values()))
         sum_psi_verified = bool(abs(sum_psi) < 1e-4)
+        sum_phiD = float(sum(phi_direct.values()))
+        sum_phiC = float(sum(phi_causal.values()))
+        f_x = float(y_hat)
+        f_x_bar = float(self.baseline_point)
+
+        # Vérification rigoureuse : Sum(phiD) = Sum(phiC) = f(x) - f(x_bar)
+        efficiency_gap_D = abs(sum_phiD - (f_x - f_x_bar))
+        efficiency_gap_C = abs(sum_phiC - (f_x - f_x_bar))
+        efficiency_verified = bool(efficiency_gap_D < 1e-3 and efficiency_gap_C < 1e-3)
+
         return {
-            "prediction": float(round(y_hat, 4)),
-            "baseline": float(round(self.baseline, 4)),
+            "prediction": float(round(f_x, 4)),
+            "baseline_expected": float(round(self.baseline, 4)),
+            "baseline_point": float(round(f_x_bar, 4)),
             "direct_contributions": {k: float(round(v, 4)) for k, v in phi_direct.items()},
             "causal_total_contributions": {k: float(round(v, 4)) for k, v in phi_causal.items()},
             "mediated_contributions": {k: float(round(v, 4)) for k, v in psi.items()},
+            "sum_phiD": float(round(sum_phiD, 6)),
+            "sum_phiC": float(round(sum_phiC, 6)),
+            "f_x_minus_f_xbar": float(round(f_x - f_x_bar, 6)),
+            "efficiency_gap_D": float(round(efficiency_gap_D, 6)),
+            "efficiency_gap_C": float(round(efficiency_gap_C, 6)),
+            "efficiency_verified": efficiency_verified,
             "sum_psi": float(round(sum_psi, 6)),
             "sum_psi_verified": bool(sum_psi_verified),
-            "verification_sum": float(round(float(self.baseline) + float(sum(phi_direct.values())), 4)),
         }

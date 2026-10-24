@@ -102,7 +102,7 @@
                 
                 document.getElementById('results').classList.remove('hidden');
                 document.getElementById('res-prediction').innerText = (result.prediction * 100).toFixed(1) + "%";
-                document.getElementById('res-baseline').innerText = (result.baseline * 100).toFixed(1) + "%";
+                document.getElementById('res-baseline').innerText = (result.baseline_expected * 100).toFixed(1) + "%";
 
                 const labels = [];
                 const values = [];
