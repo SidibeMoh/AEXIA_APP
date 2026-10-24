@@ -1,4 +1,4 @@
-"""Endpoints de scoring AEXIA™ v3.2."""
+﻿"""Endpoints de scoring AEXIA™ v3.2."""
 from __future__ import annotations
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
@@ -78,3 +78,21 @@ class CardPayload(BaseModel):
 def card_validate(body: CardPayload):
     ok, errors = validate_card(body.card)
     return {"valid": ok, "errors": errors}
+
+# ==========================================
+# RAD-lite (V3.1) - Route principale
+# ==========================================
+class RADLiteInput(BaseModel):
+    s_att: list[float] = Field(..., min_length=1)
+    s_eff: list[float] = Field(..., min_length=1)
+    beta: list[int] = Field(..., min_length=1)
+
+
+@router.post("/rad-lite/system")
+def compute_rad_lite(body: RADLiteInput):
+    """Calcule le RAD-lite (V3.1) - indicateur principal."""
+    try:
+        result = scoring.rad_lite(body.s_att, body.s_eff, body.beta)
+    except ValueError as e:
+        raise HTTPException(status_code=422, detail=str(e))
+    return result

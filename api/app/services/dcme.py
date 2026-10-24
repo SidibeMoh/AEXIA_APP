@@ -1,4 +1,4 @@
-"""
+﻿"""
 AEXIA™ v3.2 — DCME (Dynamic Causal Multi-scale Explanation)
 ============================================================
 Implémentation algorithmique des équations du framework.
@@ -121,62 +121,64 @@ class DCMEngine:
             
         return shapley
 
+    def _causal_salary(self, age: float, gender: float) -> float:
+        """Equation causale du salaire (sans bruit)."""
+        return 20000 + (age * 500) + (gender * 10000)
+
+    def _causal_fill(self, instance: dict, intervened: set) -> dict:
+        """Remplit les variables manquantes : marginale ou modele causal."""
+        inst = instance.copy()
+        for f in self.features:
+            if f not in inst:
+                inst[f] = self.df[f].mean()
+        # On ne recalcule le salaire QUE si Age ou Gender est intervenu ET que Salary n'est pas directement intervenu
+        if ('Age' in intervened or 'Gender' in intervened) and ('Salary' not in intervened):
+            inst['Salary'] = self._causal_salary(inst['Age'], inst['Gender'])
+        return inst
+
+    def _shapley_value_causal(self, instance: dict, feature: str) -> float:
+        """Phi_C : valeur de Shapley causale (avec propagation do-calculus)."""
+        from itertools import combinations
+        other_features = [f for f in self.features if f != feature]
+        n = len(other_features)
+        shapley = 0.0
+        all_subsets = []
+        for r in range(n + 1):
+            all_subsets.extend(combinations(other_features, r))
+        for S in all_subsets:
+            S = list(S)
+            intervened_with = set(S) | {feature}
+            intervened_without = set(S)
+            inst_with = {f: instance[f] for f in S}
+            inst_with[feature] = instance[feature]
+            inst_with_filled = self._causal_fill(inst_with, intervened_with)
+            inst_without = {f: instance[f] for f in S}
+            inst_without_filled = self._causal_fill(inst_without, intervened_without)
+            v_with = self._predict(inst_with_filled)
+            v_without = self._predict(inst_without_filled)
+            weight = math.factorial(len(S)) * math.factorial(n - len(S)) / math.factorial(n)
+            shapley += weight * (v_with - v_without)
+        return shapley
+
     def calculate_dcme(self, instance: dict) -> dict:
-        """
-        Calcule la décomposition DCME complète (Équation 1.1).
-        y = phi_0 + somme(phi_direct) + somme(psi_medie)
-        """
+        """DCME V3.1 : y = baseline + Sum(phi_C) = baseline + Sum(phi_D), psi = phi_C - phi_D (Sum(psi) = 0)."""
         phi_direct = {}
-        psi_mediated = {}
-        
-        # 1. Calcul des contributions directes (phi_i)
-        # On utilise les Shapley values classiques pour l'effet direct
         for f in self.features:
             phi_direct[f] = self._shapley_value(instance, f)
-            
-        # 2. Calcul des effets médiés (psi_ij)
-        # Exemple spécifique : Gender -> Salary -> Loan_Approved
-        # NIE = E[f(Gender=1, Salary=s(Gender=1))] - E[f(Gender=1, Salary=s(Gender=0))]
-        # Approximé ici par la différence de prédiction
-        
-        # Effet médié de Gender sur Loan via Salary
-        inst_actual = instance.copy()
-        
-        # Contrefactuel : on change le genre, mais on garde le salaire 'attendu' pour ce nouveau genre
-        inst_cf_gender = inst_actual.copy()
-        inst_cf_gender['Gender'] = 1 - inst_actual['Gender']
-        
-        # Pour estimer le salaire contrefactuel, on peut utiliser une régression simple
-        # ou prendre la moyenne des salaires pour ce genre
-        salary_cf = self.df[self.df['Gender'] == inst_cf_gender['Gender']]['Salary'].mean()
-        
-        # Prédiction avec le contrefactuel (Gender modifié, Salary ajusté)
-        inst_cf_mediated = {**inst_actual, 'Gender': inst_cf_gender['Gender'], 'Salary': salary_cf}
-        
-        # Effet médié = Différence entre le scénario où on change le salaire seul vs où on ne change rien
-        # (Simplifié pour l'exemple)
-        pred_actual = self._predict(inst_actual)
-        pred_cf_mediated = self._predict(inst_cf_mediated)
-        
-        # L'effet médié total (approximatif) pour Gender
-        psi_mediated['Gender_via_Salary'] = (pred_cf_mediated - pred_actual) * 0.5 
-        
-        # 3. Reconstruction de l'équation
+        phi_causal = {}
+        for f in self.features:
+            phi_causal[f] = self._shapley_value_causal(instance, f)
+        psi = {f: phi_causal[f] - phi_direct[f] for f in self.features}
         y_hat = self._predict(instance)
-        
-        # On ajuste pour que la somme = y_hat - baseline
-        sum_effects = sum(phi_direct.values()) + sum(psi_mediated.values())
-        residual = (y_hat - self.baseline) - sum_effects
-        
-        # On redistribue le résidu (erreur d'approximation) sur les effets directs
-        if residual != 0:
-            for f in phi_direct:
-                phi_direct[f] += residual / len(phi_direct)
-        
+        sum_psi = float(sum(psi.values()))
+        sum_psi_verified = bool(abs(sum_psi) < 1e-4)
         return {
-            "prediction": round(y_hat, 4),
-            "baseline": round(self.baseline, 4),
-            "direct_contributions": {k: round(v, 4) for k, v in phi_direct.items()},
-            "mediated_contributions": {k: round(v, 4) for k, v in psi_mediated.items()},
-            "verification_sum": round(self.baseline + sum(phi_direct.values()) + sum(psi_mediated.values()), 4)
+            "prediction": float(round(y_hat, 4)),
+            "baseline": float(round(self.baseline, 4)),
+            "direct_contributions": {k: float(round(v, 4)) for k, v in phi_direct.items()},
+            "causal_total_contributions": {k: float(round(v, 4)) for k, v in phi_causal.items()},
+            "mediated_contributions": {k: float(round(v, 4)) for k, v in psi.items()},
+            "sum_psi": float(round(sum_psi, 6)),
+            "sum_psi_verified": bool(sum_psi_verified),
+            "verification_sum": float(round(float(self.baseline) + float(sum(phi_direct.values())), 4)),
         }

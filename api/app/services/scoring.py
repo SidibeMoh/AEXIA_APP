@@ -1,4 +1,4 @@
-"""
+﻿"""
 AEXIA™ v3.2 — Moteur de scoring
 ================================
 Implémente les règles du framework AEXIA™ v3.2
@@ -149,3 +149,51 @@ def ecs(phi_x: Sequence[float], neighbour_phis: Sequence[Sequence[float]]) -> fl
 def ecs_model(scores: Sequence[float]) -> float:
     if not scores: raise ValueError("Liste de scores vide")
     return sum(scores) / len(scores)
+
+# ==========================================
+# RAD-lite (V3.1) - Indicateur principal
+# ==========================================
+def rad_lite(s_att: Sequence[float], s_eff: Sequence[float], beta: Sequence[int]) -> dict:
+    """
+    Calcule le RAD-lite (V3.1) : part pondérée du chemin de maturité restant.
+    
+    Formule : RAD-lite = Σᵢ βᵢ · max(0, S_att,i − S_eff,i) / Σᵢ βᵢ · S_att,i
+    
+    Args:
+        s_att: niveaux attendus (1 à 5)
+        s_eff: niveaux effectifs (1 à 5)
+        beta: coefficients de criticité (1 à 4), alignés sur s_att/s_eff
+    
+    Returns:
+        dict avec rad_lite (0-1), total_gap, total_expected, worst_share
+    """
+    if not (len(s_att) == len(s_eff) == len(beta)):
+        raise ValueError("s_att, s_eff et beta doivent avoir la même longueur")
+    if len(s_att) == 0:
+        raise ValueError("Au moins un système est requis")
+    for b in beta:
+        if b not in (1, 2, 3, 4):
+            raise ValueError(f"beta doit être dans {{1,2,3,4}}, reçu {b}")
+    
+    num = 0.0  # Σ βᵢ · max(0, S_att,i − S_eff,i)
+    den = 0.0  # Σ βᵢ · S_att,i
+    per_system_gap = []
+    
+    for i in range(len(s_att)):
+        gap = max(0.0, s_att[i] - s_eff[i])
+        weighted_gap = beta[i] * gap
+        num += weighted_gap
+        den += beta[i] * s_att[i]
+        per_system_gap.append(weighted_gap)
+    
+    rad_lite_value = num / den if den > 0 else 0.0
+    
+    # Share du pire système (celui qui explique le plus grand écart pondéré)
+    worst_share = (max(per_system_gap) / num) if num > 0 else 0.0
+    
+    return {
+        "rad_lite": round(rad_lite_value, 4),
+        "total_gap": round(num, 2),
+        "total_expected": round(den, 2),
+        "worst_share": round(worst_share, 4),
+    }
